@@ -1,8 +1,8 @@
 /*
 * File: lib/screens/medication_list_screen.dart
 * Description: Screen to display user's medications and allow for marking as taken
-* Date: May 5, 2025
-* Author: Milo App Development Team
+* Date: May 8, 2025
+* Author: Mango App Development Team
 */
 
 import 'package:flutter/material.dart';
@@ -12,6 +12,7 @@ import '../providers/medication_provider.dart';
 import '../theme/app_theme.dart';
 import '../config/constants.dart';
 import '../services/logging_service.dart';
+import 'package:get_it/get_it.dart';
 
 /// Screen to display and manage medications
 ///
@@ -32,10 +33,14 @@ class _MedicationListScreenState extends State<MedicationListScreen>
   // Flag to show loading indicators during operations
   bool _isProcessing = false;
 
+  // LoggingService
+  late final LoggingService _loggingService;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loggingService = GetIt.instance<LoggingService>();
 
     // Load medications when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -56,10 +61,13 @@ class _MedicationListScreenState extends State<MedicationListScreen>
   }
 
   /// Mark a medication as taken
-  Future<void> _markAsTaken(BuildContext context, String medicationId, String medicationName) async {
+  Future<void> _markAsTaken(
+    BuildContext context,
+    String medicationId,
+    String medicationName,
+  ) async {
     // Store local references to avoid BuildContext usage across async gaps
     final provider = Provider.of<MedicationProvider>(context, listen: false);
-    final logService = Provider.of<LoggingService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final errorColor = AppTheme.errorColor(context);
 
@@ -78,20 +86,27 @@ class _MedicationListScreenState extends State<MedicationListScreen>
             action: SnackBarAction(
               label: 'Undo',
               textColor: Colors.white,
-              onPressed: () => _undoMarkAsTaken(context, medicationId, medicationName),
+              onPressed:
+                  () => _undoMarkAsTaken(context, medicationId, medicationName),
             ),
           ),
         );
       }
     } catch (e, stackTrace) {
-      logService.error('Failed to mark medication as taken', e, stackTrace);
+      _loggingService.error(
+        'Failed to mark medication as taken',
+        e,
+        stackTrace,
+      );
 
       if (mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('ALL_DOSES_TAKEN')
-                ? 'All doses already taken for today'
-                : 'Could not mark medication as taken'),
+            content: Text(
+              e.toString().contains('ALL_DOSES_TAKEN')
+                  ? 'All doses already taken for today'
+                  : 'Could not mark medication as taken',
+            ),
             backgroundColor: errorColor,
           ),
         );
@@ -106,10 +121,13 @@ class _MedicationListScreenState extends State<MedicationListScreen>
   }
 
   /// Undo marking a medication as taken
-  Future<void> _undoMarkAsTaken(BuildContext context, String medicationId, String medicationName) async {
+  Future<void> _undoMarkAsTaken(
+    BuildContext context,
+    String medicationId,
+    String medicationName,
+  ) async {
     // Store local references to avoid BuildContext usage across async gaps
     final provider = Provider.of<MedicationProvider>(context, listen: false);
-    final logService = Provider.of<LoggingService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final errorColor = AppTheme.errorColor(context);
 
@@ -129,14 +147,20 @@ class _MedicationListScreenState extends State<MedicationListScreen>
         );
       }
     } catch (e, stackTrace) {
-      logService.error('Failed to undo marking medication as taken', e, stackTrace);
+      _loggingService.error(
+        'Failed to undo marking medication as taken',
+        e,
+        stackTrace,
+      );
 
       if (mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('NO_DOSES_TAKEN')
-                ? 'No doses taken today to undo'
-                : 'Could not undo'),
+            content: Text(
+              e.toString().contains('NO_DOSES_TAKEN')
+                  ? 'No doses taken today to undo'
+                  : 'Could not undo',
+            ),
             backgroundColor: errorColor,
           ),
         );
@@ -151,10 +175,14 @@ class _MedicationListScreenState extends State<MedicationListScreen>
   }
 
   /// Toggle a medication's active state
-  Future<void> _toggleMedicationActive(BuildContext context, String medicationId, String medicationName, bool currentState) async {
+  Future<void> _toggleMedicationActive(
+    BuildContext context,
+    String medicationId,
+    String medicationName,
+    bool currentState,
+  ) async {
     // Store local references to avoid BuildContext usage across async gaps
     final provider = Provider.of<MedicationProvider>(context, listen: false);
-    final logService = Provider.of<LoggingService>(context, listen: false);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final errorColor = AppTheme.errorColor(context);
 
@@ -163,20 +191,28 @@ class _MedicationListScreenState extends State<MedicationListScreen>
         _isProcessing = true;
       });
 
-      final updatedMedication = await provider.toggleMedicationActive(medicationId);
+      final updatedMedication = await provider.toggleMedicationActive(
+        medicationId,
+      );
 
       if (updatedMedication != null && mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text(updatedMedication.isActive
-                ? '$medicationName activated'
-                : '$medicationName paused'),
+            content: Text(
+              updatedMedication.isActive
+                  ? '$medicationName activated'
+                  : '$medicationName paused',
+            ),
             backgroundColor: Colors.blue,
           ),
         );
       }
     } catch (e, stackTrace) {
-      logService.error('Failed to toggle medication active state', e, stackTrace);
+      _loggingService.error(
+        'Failed to toggle medication active state',
+        e,
+        stackTrace,
+      );
 
       if (mounted) {
         scaffoldMessenger.showSnackBar(
@@ -202,11 +238,7 @@ class _MedicationListScreenState extends State<MedicationListScreen>
 
   /// Navigate to edit an existing medication
   void _navigateToEditMedication(BuildContext context, Medication medication) {
-    Navigator.pushNamed(
-      context,
-      '/medication_entry',
-      arguments: medication,
-    );
+    Navigator.pushNamed(context, '/medication_entry', arguments: medication);
   }
 
   @override
@@ -216,10 +248,7 @@ class _MedicationListScreenState extends State<MedicationListScreen>
         title: Text('Medications'),
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
-            Tab(text: 'Due Today'),
-            Tab(text: 'All Medications'),
-          ],
+          tabs: [Tab(text: 'Due Today'), Tab(text: 'All Medications')],
         ),
       ),
       body: SafeArea(
@@ -227,9 +256,7 @@ class _MedicationListScreenState extends State<MedicationListScreen>
           builder: (context, provider, _) {
             // Show loading indicator if provider is loading
             if (provider.isLoading || _isProcessing) {
-              return Center(
-                child: CircularProgressIndicator(),
-              );
+              return Center(child: CircularProgressIndicator());
             }
 
             // Show error message if provider has an error
@@ -296,11 +323,26 @@ class _MedicationListScreenState extends State<MedicationListScreen>
         tooltip: 'Add Medication',
         child: Icon(Icons.add),
       ),
+      // Only display the privacy message at the bottom
+      bottomSheet: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(bottom: 16, left: 16, right: 16),
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Text(
+          'All your data is stored only on your device.',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 
   /// Build a list of medications
-  Widget _buildMedicationsList(BuildContext context, List<Medication> medications, {required bool isToday}) {
+  Widget _buildMedicationsList(
+    BuildContext context,
+    List<Medication> medications, {
+    required bool isToday,
+  }) {
     // Show empty state if no medications
     if (medications.isEmpty) {
       return Center(
@@ -314,9 +356,7 @@ class _MedicationListScreenState extends State<MedicationListScreen>
             ),
             SizedBox(height: AppConstants.defaultPadding),
             Text(
-              isToday
-                  ? 'No Medications Due Today'
-                  : 'No Medications Added',
+              isToday ? 'No Medications Due Today' : 'No Medications Added',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             SizedBox(height: AppConstants.defaultPadding / 2),
@@ -340,8 +380,12 @@ class _MedicationListScreenState extends State<MedicationListScreen>
 
     // Display the list of medications
     return ListView.builder(
-      padding: EdgeInsets.symmetric(
-        vertical: AppConstants.defaultPadding,
+      padding: EdgeInsets.only(
+        top: AppConstants.defaultPadding,
+        left: AppConstants.defaultPadding,
+        right: AppConstants.defaultPadding,
+        // Add bottom padding to ensure content isn't covered by bottomSheet
+        bottom: AppConstants.defaultPadding + 40,
       ),
       itemCount: medications.length,
       itemBuilder: (context, index) {
@@ -352,17 +396,19 @@ class _MedicationListScreenState extends State<MedicationListScreen>
   }
 
   /// Build a medication card with appropriate styling
-  Widget _buildMedicationCard(BuildContext context, Medication medication, bool isDueToday) {
+  Widget _buildMedicationCard(
+    BuildContext context,
+    Medication medication,
+    bool isDueToday,
+  ) {
     // Determine medication color (use default if not set)
-    Color medicationColor = medication.color != null
-        ? Color(int.parse(medication.color!))
-        : Theme.of(context).colorScheme.primary;
+    Color medicationColor =
+        medication.color != null
+            ? Color(int.parse(medication.color!))
+            : Theme.of(context).colorScheme.primary;
 
     return Card(
-      margin: EdgeInsets.symmetric(
-        horizontal: AppConstants.defaultPadding,
-        vertical: AppConstants.defaultPadding / 2,
-      ),
+      margin: EdgeInsets.symmetric(vertical: AppConstants.defaultPadding / 2),
       elevation: medication.isActive ? 2 : 1,
       child: InkWell(
         onTap: () => _navigateToEditMedication(context, medication),
@@ -388,14 +434,24 @@ class _MedicationListScreenState extends State<MedicationListScreen>
                         ),
                       ),
                       SizedBox(width: 12),
-                      // Medication name
-                      Text(
-                        medication.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: medication.isActive
-                              ? Theme.of(context).textTheme.titleMedium?.color
-                              : Theme.of(context).textTheme.bodySmall?.color,
+                      // Medication name - with overflow handling
+                      Flexible(
+                        child: Text(
+                          medication.name,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color:
+                                medication.isActive
+                                    ? Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium?.color
+                                    : Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.color,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
@@ -404,12 +460,13 @@ class _MedicationListScreenState extends State<MedicationListScreen>
                   // Active toggle switch
                   Switch(
                     value: medication.isActive,
-                    onChanged: (value) => _toggleMedicationActive(
-                      context,
-                      medication.id,
-                      medication.name,
-                      medication.isActive,
-                    ),
+                    onChanged:
+                        (value) => _toggleMedicationActive(
+                          context,
+                          medication.id,
+                          medication.name,
+                          medication.isActive,
+                        ),
                   ),
                 ],
               ),
@@ -443,16 +500,21 @@ class _MedicationListScreenState extends State<MedicationListScreen>
                       color: Theme.of(context).colorScheme.secondary,
                     ),
                     SizedBox(width: 8),
-                    Text(
-                      '${medication.frequency}x daily • ${_formatDaysOfWeek(medication.daysOfWeek)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    // Fixed overflow by wrapping in Flexible
+                    Flexible(
+                      child: Text(
+                        '${medication.frequency}x daily • ${_formatDaysOfWeek(medication.daysOfWeek)}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
               ),
 
               // Instructions if available
-              if (medication.instructions != null && medication.instructions!.isNotEmpty)
+              if (medication.instructions != null &&
+                  medication.instructions!.isNotEmpty)
                 Padding(
                   padding: EdgeInsets.only(bottom: 8),
                   child: Row(
@@ -481,11 +543,12 @@ class _MedicationListScreenState extends State<MedicationListScreen>
                 Align(
                   alignment: Alignment.centerRight,
                   child: ElevatedButton.icon(
-                    onPressed: () => _markAsTaken(
-                      context,
-                      medication.id,
-                      medication.name,
-                    ),
+                    onPressed:
+                        () => _markAsTaken(
+                          context,
+                          medication.id,
+                          medication.name,
+                        ),
                     icon: Icon(Icons.check),
                     label: Text('Take Now'),
                     style: ElevatedButton.styleFrom(
@@ -498,10 +561,7 @@ class _MedicationListScreenState extends State<MedicationListScreen>
               if (!medication.isActive)
                 Container(
                   margin: EdgeInsets.only(top: 8),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.grey.withAlpha(50),
                     borderRadius: BorderRadius.circular(16),
@@ -531,18 +591,27 @@ class _MedicationListScreenState extends State<MedicationListScreen>
     sortedDays.sort();
 
     // Convert to day abbreviations
-    final dayNames = sortedDays.map((day) {
-      switch (day) {
-        case '1': return 'Mon';
-        case '2': return 'Tue';
-        case '3': return 'Wed';
-        case '4': return 'Thu';
-        case '5': return 'Fri';
-        case '6': return 'Sat';
-        case '7': return 'Sun';
-        default: return '';
-      }
-    }).toList();
+    final dayNames =
+        sortedDays.map((day) {
+          switch (day) {
+            case '1':
+              return 'Mon';
+            case '2':
+              return 'Tue';
+            case '3':
+              return 'Wed';
+            case '4':
+              return 'Thu';
+            case '5':
+              return 'Fri';
+            case '6':
+              return 'Sat';
+            case '7':
+              return 'Sun';
+            default:
+              return '';
+          }
+        }).toList();
 
     // Check for weekdays only
     if (daysOfWeek.length == 5 &&

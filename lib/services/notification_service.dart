@@ -1,7 +1,7 @@
 /*
 * File: lib/services/notification_service.dart
 * Description: Service for handling local notifications in the Milo App
-* Date: May 5, 2025
+* Date: May 7, 2025
 * Author: Milo App Development Team
 */
 
@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
 
 import '../core/exceptions.dart';
 import '../config/constants.dart';
@@ -24,17 +25,20 @@ import 'package:get_it/get_it.dart';
 /// - Managing notification channels and settings
 class NotificationService {
   final LoggingService _logger = GetIt.instance<LoggingService>();
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
 
   // Notification channels
   final String _medicationChannelId = AppConstants.medicationChannelId;
   final String _medicationChannelName = AppConstants.medicationChannelName;
-  final String _medicationChannelDescription = AppConstants.medicationChannelDescription;
+  final String _medicationChannelDescription =
+      AppConstants.medicationChannelDescription;
 
   // Notification IDs
-  final int _baseNotificationId = 10000; // Use a high base ID to avoid conflicts
+  final int _baseNotificationId =
+      10000; // Use a high base ID to avoid conflicts
 
   /// Initializes the notification service.
   ///
@@ -53,18 +57,23 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('UTC'));
 
       // Initialize notification settings
-      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const AndroidInitializationSettings androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      final DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-        requestAlertPermission: true,
-        requestBadgePermission: true,
-        requestSoundPermission: true,
-        onDidReceiveLocalNotification: _onDidReceiveLocalNotification,
-      );
+      // Initialize iOS settings
+      final DarwinInitializationSettings darwinSettings =
+          DarwinInitializationSettings(
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
+            requestCriticalPermission: true,
+            notificationCategories: [],
+          );
 
       final InitializationSettings initSettings = InitializationSettings(
         android: androidSettings,
-        iOS: iosSettings,
+        iOS: darwinSettings,
+        macOS: darwinSettings,
       );
 
       // Initialize the plugin
@@ -72,17 +81,6 @@ class NotificationService {
         initSettings,
         onDidReceiveNotificationResponse: _onDidReceiveNotificationResponse,
       );
-
-      // Request permissions on iOS
-      if (Platform.isIOS) {
-        await _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-      }
 
       // Create notification channels on Android
       if (Platform.isAndroid) {
@@ -95,7 +93,8 @@ class NotificationService {
       _logger.error('Failed to initialize notification service', e, stackTrace);
       throw NotificationException(
         code: 'NOTIFICATION_INIT_FAILED',
-        message: 'Failed to initialize notification service. Please check notification permissions.',
+        message:
+            'Failed to initialize notification service. Please check notification permissions.',
         technicalDetail: e.toString(),
       );
     }
@@ -103,8 +102,11 @@ class NotificationService {
 
   /// Creates the Android notification channel for medication reminders.
   Future<void> _createAndroidNotificationChannel() async {
-    final AndroidFlutterLocalNotificationsPlugin? androidPlugin = _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+        _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
 
     if (androidPlugin == null) return;
 
@@ -118,17 +120,12 @@ class NotificationService {
         enableVibration: true,
         enableLights: true,
         playSound: true,
+        showBadge: true,
       ),
     );
   }
 
-  /// Handles notification tap on iOS < 10.
-  void _onDidReceiveLocalNotification(int id, String? title, String? body, String? payload) {
-    _logger.debug('Received local notification: id=$id, title=$title, payload=$payload');
-    // This is only for older iOS versions - no action needed for now
-  }
-
-  /// Handles notification tap on iOS >= 10 and Android.
+  /// Handles notification tap on iOS and Android.
   void _onDidReceiveNotificationResponse(NotificationResponse response) {
     _logger.debug('Notification response received: ${response.payload}');
 
@@ -166,25 +163,33 @@ class NotificationService {
       }
 
       // Convert the ID string to a numeric ID using a simple hash
-      final int notificationId = _baseNotificationId + id.hashCode.abs() % 10000;
+      final int notificationId =
+          _baseNotificationId + id.hashCode.abs() % 10000;
 
       // Convert DateTime to TZDateTime
-      final tz.TZDateTime tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
+      final tz.TZDateTime tzScheduledTime = tz.TZDateTime.from(
+        scheduledTime,
+        tz.local,
+      );
 
       // Check if the scheduled time is in the past
       final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
       if (tzScheduledTime.isBefore(now)) {
-        _logger.warning('Attempted to schedule a notification in the past: $scheduledTime');
+        _logger.warning(
+          'Attempted to schedule a notification in the past: $scheduledTime',
+        );
         return;
       }
 
       // Use provided channel values or defaults
       final String notifChannelId = channelId ?? _medicationChannelId;
       final String notifChannelName = channelName ?? _medicationChannelName;
-      final String notifChannelDescription = channelDescription ?? _medicationChannelDescription;
+      final String notifChannelDescription =
+          channelDescription ?? _medicationChannelDescription;
 
       // Configure notification details
-      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      final AndroidNotificationDetails
+      androidDetails = AndroidNotificationDetails(
         notifChannelId,
         notifChannelName,
         channelDescription: notifChannelDescription,
@@ -192,21 +197,26 @@ class NotificationService {
         priority: Priority.high,
         ticker: 'Medication Reminder',
         visibility: NotificationVisibility.public,
-        category: AndroidNotificationCategory.reminder,
         fullScreenIntent: true,
+        // Added settings to ensure notification persists until user interaction
+        autoCancel: false, // Prevent auto-dismissal
+        ongoing: true, // Make notification persistent
+        category: AndroidNotificationCategory.reminder,
       );
 
-      final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      final DarwinNotificationDetails darwinDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
         sound: 'default',
-        interruptionLevel: InterruptionLevel.active,
+        interruptionLevel:
+            InterruptionLevel.timeSensitive, // Higher interrupt level
       );
 
       final NotificationDetails notificationDetails = NotificationDetails(
         android: androidDetails,
-        iOS: iosDetails,
+        iOS: darwinDetails,
+        macOS: darwinDetails,
       );
 
       // Schedule the notification
@@ -217,7 +227,6 @@ class NotificationService {
         tzScheduledTime,
         notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: medicationId,
       );
 
@@ -226,7 +235,8 @@ class NotificationService {
       _logger.error('Failed to schedule medication reminder', e, stackTrace);
       throw NotificationException(
         code: 'NOTIFICATION_SCHEDULE_FAILED',
-        message: 'Failed to schedule reminder. Please check notification permissions.',
+        message:
+            'Failed to schedule reminder. Please check notification permissions.',
         technicalDetail: e.toString(),
       );
     }
@@ -270,7 +280,11 @@ class NotificationService {
       await _flutterLocalNotificationsPlugin.cancelAll();
       _logger.info('Cancelled reminders for medication: $medicationId');
     } catch (e, stackTrace) {
-      _logger.error('Failed to cancel reminders for medication: $medicationId', e, stackTrace);
+      _logger.error(
+        'Failed to cancel reminders for medication: $medicationId',
+        e,
+        stackTrace,
+      );
       throw NotificationException(
         code: 'NOTIFICATION_CANCEL_FAILED',
         message: 'Failed to cancel medication reminders',
@@ -285,27 +299,33 @@ class NotificationService {
   Future<bool> areNotificationsEnabled() async {
     try {
       if (Platform.isIOS) {
-        final bool? result = await _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        return result ?? false;
+        final IOSFlutterLocalNotificationsPlugin? iosPlugin =
+            _flutterLocalNotificationsPlugin
+                .resolvePlatformSpecificImplementation<
+                  IOSFlutterLocalNotificationsPlugin
+                >();
+        if (iosPlugin != null) {
+          final bool? result = await iosPlugin.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+          return result ?? false;
+        }
+        return false;
       } else if (Platform.isAndroid) {
-        final AndroidFlutterLocalNotificationsPlugin? androidPlugin = _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-
-        if (androidPlugin == null) return false;
-
-        final bool? result = await androidPlugin.areNotificationsEnabled();
-        return result ?? false;
+        // Use permission_handler to check notification permission status
+        final status = await Permission.notification.status;
+        return status.isGranted;
       }
 
       return false;
     } catch (e, stackTrace) {
-      _logger.error('Failed to check if notifications are enabled', e, stackTrace);
+      _logger.error(
+        'Failed to check if notifications are enabled',
+        e,
+        stackTrace,
+      );
       return false;
     }
   }
@@ -320,28 +340,33 @@ class NotificationService {
       }
 
       if (Platform.isIOS) {
-        final bool? result = await _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
-        return result ?? false;
+        final IOSFlutterLocalNotificationsPlugin? iosPlugin =
+            _flutterLocalNotificationsPlugin
+                .resolvePlatformSpecificImplementation<
+                  IOSFlutterLocalNotificationsPlugin
+                >();
+        if (iosPlugin != null) {
+          final bool? result = await iosPlugin.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
+          return result ?? false;
+        }
+        return false;
       } else if (Platform.isAndroid) {
-        final AndroidFlutterLocalNotificationsPlugin? androidPlugin = _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-
-        if (androidPlugin == null) return false;
-
-        // For Android 13+, request permissions
-        final bool? result = await androidPlugin.requestPermission();
-        return result ?? false;
+        // For Android 13+, use permission_handler
+        final status = await Permission.notification.request();
+        return status.isGranted;
       }
 
       return false;
     } catch (e, stackTrace) {
-      _logger.error('Failed to request notification permissions', e, stackTrace);
+      _logger.error(
+        'Failed to request notification permissions',
+        e,
+        stackTrace,
+      );
       return false;
     }
   }

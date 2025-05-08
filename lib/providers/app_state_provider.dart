@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
-import '../config/constants.dart';
+import 'package:hey_milo/config/constants.dart';
 import '../core/exceptions.dart';
 import '../services/local_storage_service.dart';
 import '../services/logging_service.dart';
@@ -29,7 +29,7 @@ enum TextSizeLevel {
   large,
 
   /// Extra large text size (1.5x normal)
-  extraLarge
+  extraLarge,
 }
 
 /// Available cloud storage providers for syncing.
@@ -41,7 +41,7 @@ enum CloudStorageProvider {
   googleDrive,
 
   /// Microsoft OneDrive
-  oneDrive
+  oneDrive,
 }
 
 /// Manages global app state and preferences.
@@ -96,9 +96,8 @@ class AppStateProvider with ChangeNotifier {
   AppStateProvider({
     required LocalStorageService localStorageService,
     required LoggingService loggingService,
-  }) :
-        _localStorageService = localStorageService,
-        _loggingService = loggingService {
+  }) : _localStorageService = localStorageService,
+       _loggingService = loggingService {
     // Load app state when provider is initialized
     loadAppState();
   }
@@ -329,15 +328,18 @@ class AppStateProvider with ChangeNotifier {
   /// [provider] Cloud storage provider to use, if enabling.
   ///
   /// Returns true if successful, false otherwise.
-  Future<bool> setCloudSync(bool enabled, {CloudStorageProvider? provider}) async {
+  Future<bool> setCloudSync(
+    bool enabled, {
+    CloudStorageProvider? provider,
+  }) async {
     try {
       _errorMessage = null;
 
       // Validate provider if enabling
       if (enabled && provider == null && _selectedCloudProvider == null) {
         throw StorageException(
-            code: 'PROVIDER_REQUIRED',
-            message: 'Please select a cloud storage provider to enable sync.'
+          code: 'PROVIDER_REQUIRED',
+          message: 'Please select a cloud storage provider to enable sync.',
         );
       }
 
@@ -537,30 +539,41 @@ class AppStateProvider with ChangeNotifier {
           _textSizeLevel = _parseTextSizeLevel(appStateJson['textSizeLevel']);
 
           // Onboarding state
-          _hasCompletedOnboarding = appStateJson['hasCompletedOnboarding'] ?? false;
+          _hasCompletedOnboarding =
+              appStateJson['hasCompletedOnboarding'] ?? false;
 
           // Privacy preferences
-          _hasAcceptedPrivacyPolicy = appStateJson['hasAcceptedPrivacyPolicy'] ?? false;
+          _hasAcceptedPrivacyPolicy =
+              appStateJson['hasAcceptedPrivacyPolicy'] ?? false;
           _isCloudSyncEnabled = appStateJson['isCloudSyncEnabled'] ?? false;
-          _selectedCloudProvider = _parseCloudProvider(appStateJson['selectedCloudProvider']);
+          _selectedCloudProvider = _parseCloudProvider(
+            appStateJson['selectedCloudProvider'],
+          );
 
           // Accessibility preferences
-          _isHighContrastEnabled = appStateJson['isHighContrastEnabled'] ?? false;
+          _isHighContrastEnabled =
+              appStateJson['isHighContrastEnabled'] ?? false;
           _isVoicePromptEnabled = appStateJson['isVoicePromptEnabled'] ?? true;
 
           // Usage statistics
           final lastOpenedDateStr = appStateJson['lastOpenedDate'];
-          _lastOpenedDate = lastOpenedDateStr != null ?
-          DateTime.parse(lastOpenedDateStr) : null;
+          _lastOpenedDate =
+              lastOpenedDateStr != null
+                  ? DateTime.parse(lastOpenedDateStr)
+                  : null;
           _appOpenCount = appStateJson['appOpenCount'] ?? 0;
 
           // Cleanup preferences
-          _autoDeleteDays = appStateJson['autoDeleteDays'] ?? AppConstants.defaultAutoDeleteDays;
+          _autoDeleteDays =
+              appStateJson['autoDeleteDays'] ??
+              AppConstants.defaultAutoDeleteDays;
           _lastDataCleanupDate = appStateJson['lastDataCleanupDate'] ?? 0;
 
           // Check if we're over free usage limit (for R1)
           if (_appOpenCount >= AppConstants.freeUsageLimit) {
-            _loggingService.info('User has reached free usage limit: $_appOpenCount recordings');
+            _loggingService.info(
+              'User has reached free usage limit: $_appOpenCount recordings',
+            );
             // Will be handled by paywall service in R1
           }
         }
@@ -594,7 +607,9 @@ class AppStateProvider with ChangeNotifier {
     await _localStorageService.initialize();
 
     final appDocDir = await getApplicationDocumentsDirectory();
-    final appSettingsDir = Directory(path.join(appDocDir.path, _appSettingsDirName));
+    final appSettingsDir = Directory(
+      path.join(appDocDir.path, _appSettingsDirName),
+    );
 
     if (!await appSettingsDir.exists()) {
       await appSettingsDir.create(recursive: true);

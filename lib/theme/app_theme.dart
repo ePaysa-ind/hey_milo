@@ -47,6 +47,9 @@ class AppTheme {
 
   // Border radius
   static const double _borderRadius = 12.0;
+  static double borderRadius(BuildContext context) {
+    return _borderRadius; // Using the private constant defined in AppTheme
+  }
 
   static final ThemeData lightTheme = ThemeData(
     colorScheme: _darkColorScheme,
@@ -66,10 +69,7 @@ class AppTheme {
       margin: EdgeInsets.all(_spacing),
     ),
 
-    dividerTheme: DividerThemeData(
-      color: Colors.white12,
-      thickness: 1,
-    ),
+    dividerTheme: DividerThemeData(color: Colors.white12, thickness: 1),
 
     textTheme: TextTheme(
       displayLarge: TextStyle(
@@ -123,52 +123,46 @@ class AppTheme {
         fontSize: _fontSizeSubheading,
         fontWeight: FontWeight.bold,
       ),
-      iconTheme: IconThemeData(
-        color: _textPrimaryDark,
-        size: _iconSize,
-      ),
+      iconTheme: IconThemeData(color: _textPrimaryDark, size: _iconSize),
     ),
 
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.all(_primaryDark),
         foregroundColor: WidgetStateProperty.all(_textPrimaryDark),
-        minimumSize: WidgetStateProperty.all(Size(_minButtonWidth, _minButtonHeight)),
-        padding: WidgetStateProperty.all(EdgeInsets.symmetric(
-          horizontal: _spacingLarge,
-          vertical: _spacing,
-        )),
+        minimumSize: WidgetStateProperty.all(
+          Size(_minButtonWidth, _minButtonHeight),
+        ),
+        padding: WidgetStateProperty.all(
+          EdgeInsets.symmetric(horizontal: _spacingLarge, vertical: _spacing),
+        ),
         shape: WidgetStateProperty.all(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_borderRadius),
           ),
         ),
-        textStyle: WidgetStateProperty.all(TextStyle(
-          fontSize: _fontSizeBody,
-          fontWeight: FontWeight.bold,
-        )),
+        textStyle: WidgetStateProperty.all(
+          TextStyle(fontSize: _fontSizeBody, fontWeight: FontWeight.bold),
+        ),
       ),
     ),
 
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
         foregroundColor: WidgetStateProperty.all(_primaryLight),
-        minimumSize: WidgetStateProperty.all(Size(_minButtonWidth, _minButtonHeight)),
-        padding: WidgetStateProperty.all(EdgeInsets.symmetric(
-          horizontal: _spacingLarge,
-          vertical: _spacing,
-        )),
-        textStyle: WidgetStateProperty.all(TextStyle(
-          fontSize: _fontSizeBody,
-          fontWeight: FontWeight.bold,
-        )),
+        minimumSize: WidgetStateProperty.all(
+          Size(_minButtonWidth, _minButtonHeight),
+        ),
+        padding: WidgetStateProperty.all(
+          EdgeInsets.symmetric(horizontal: _spacingLarge, vertical: _spacing),
+        ),
+        textStyle: WidgetStateProperty.all(
+          TextStyle(fontSize: _fontSizeBody, fontWeight: FontWeight.bold),
+        ),
       ),
     ),
 
-    iconTheme: IconThemeData(
-      color: _textPrimaryDark,
-      size: _iconSize,
-    ),
+    iconTheme: IconThemeData(color: _textPrimaryDark, size: _iconSize),
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -178,18 +172,9 @@ class AppTheme {
         borderRadius: BorderRadius.circular(_borderRadius),
         borderSide: BorderSide.none,
       ),
-      hintStyle: TextStyle(
-        color: _textSecondaryDark,
-        fontSize: _fontSizeBody,
-      ),
-      labelStyle: TextStyle(
-        color: _textPrimaryDark,
-        fontSize: _fontSizeBody,
-      ),
-      errorStyle: TextStyle(
-        color: _accentRed,
-        fontSize: _fontSizeCaption,
-      ),
+      hintStyle: TextStyle(color: _textSecondaryDark, fontSize: _fontSizeBody),
+      labelStyle: TextStyle(color: _textPrimaryDark, fontSize: _fontSizeBody),
+      errorStyle: TextStyle(color: _accentRed, fontSize: _fontSizeCaption),
     ),
 
     dialogTheme: DialogTheme(
@@ -230,9 +215,7 @@ class AppTheme {
         }
         return _textSecondaryDark;
       }),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4.0),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4.0)),
     ),
 
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -245,9 +228,7 @@ class AppTheme {
         fontSize: _fontSizeCaption,
         fontWeight: FontWeight.bold,
       ),
-      unselectedLabelStyle: TextStyle(
-        fontSize: _fontSizeCaption,
-      ),
+      unselectedLabelStyle: TextStyle(fontSize: _fontSizeCaption),
     ),
 
     progressIndicatorTheme: ProgressIndicatorThemeData(
